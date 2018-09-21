@@ -9,6 +9,19 @@ import (
 )
 
 func dirTree(out io.Writer, path string, printFiles bool) (error error) {
+	file, err := os.Open(path)
+
+	if err != nil {
+		panic("Can not open directory " + path)
+	}
+	defer file.Close()
+
+	names, _ := file.Readdirnames(0)
+
+	for _, name := range names {
+		fmt.Println(name)
+	}
+
 	fmt.Println(os.Args)
 	fmt.Println(path)
 	fmt.Println(printFiles)
