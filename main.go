@@ -1,15 +1,18 @@
 package main
 
 import (
+	"os"
+	//"path/filepath"
+	//"strings"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
-func dirTree(out *os.File, path string, printFiles bool) (error error) {
-
+func dirTree(out io.Writer, path string, printFiles bool) (error error) {
+	fmt.Println(os.Args)
+	fmt.Println(path)
+	fmt.Println(printFiles)
+	return error
 }
 
 func main() {
