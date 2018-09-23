@@ -1,31 +1,40 @@
 package main
 
 import (
-	"os"
-	//"path/filepath"
-	//"strings"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
 )
 
-func dirTree(out io.Writer, path string, printFiles bool) (error error) {
+func dirTree(out io.Writer, path string, printFiles bool) (err error) {
 	file, err := os.Open(path)
+	dir, err := file.Readdir(0)
+	file.Close()
 
-	if err != nil {
-		panic("Can not open directory " + path)
+	sort.Slice(dir, func(i, j int) bool {
+		return dir[i].Name() < dir[j].Name()
+	})
+
+	var b strings.Builder
+	for range strings.Split(path, "/") {
+		b.WriteString("|\t")
 	}
-	defer file.Close()
 
-	names, _ := file.Readdirnames(0)
-
-	for _, name := range names {
-		fmt.Println(name)
+	for _, info := range dir {
+		if info.IsDir() {
+			fmt.Fprintf(out, "%s%s\n", b.String(), info.Name())
+			dirTree(out, filepath.Join(path, info.Name()), printFiles)
+		} else {
+			if printFiles {
+				fmt.Fprintf(out, "%s%s (%db)\n",b.String(), info.Name(), info.Size())
+			}
+		}
 	}
 
-	fmt.Println(os.Args)
-	fmt.Println(path)
-	fmt.Println(printFiles)
-	return error
+	return err
 }
 
 func main() {
