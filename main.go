@@ -20,17 +20,21 @@ func dirTree(out io.Writer, path string, printFiles bool) (err error) {
 
 	var b strings.Builder
 	for range strings.Split(path, "/") {
-		b.WriteString("|\t")
+		b.WriteString("\t")
 	}
 
-	for _, info := range dir {
+	for idx, info := range dir {
+		if idx == len(dir) -1 {
+			b.WriteString("└───")
+		} else {
+			b.WriteString("├───")
+		}
+
 		if info.IsDir() {
 			fmt.Fprintf(out, "%s%s\n", b.String(), info.Name())
 			dirTree(out, filepath.Join(path, info.Name()), printFiles)
-		} else {
-			if printFiles {
-				fmt.Fprintf(out, "%s%s (%db)\n",b.String(), info.Name(), info.Size())
-			}
+		} else if printFiles {
+			fmt.Fprintf(out, "%s%s (%db)\n", b.String(), info.Name(), info.Size())
 		}
 	}
 
