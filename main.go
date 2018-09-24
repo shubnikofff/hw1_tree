@@ -14,10 +14,6 @@ type Node struct {
 	nodes []Node
 }
 
-func (node *Node) addNode(newNode Node) {
-	node.nodes = append(node.nodes, newNode)
-}
-
 func (node Node) hasNodes() bool {
 	return len(node.nodes) > 0
 }
@@ -46,49 +42,31 @@ func readDir(path string, nodes []Node) []Node {
 	return nodes
 }
 
-func getDir(path string) (err error, files []os.FileInfo) {
-	file, err := os.Open(path)
-	files, err = file.Readdir(0)
-	file.Close()
-	return err, files
-}
-
-func printDir(out io.Writer, nodes []os.FileInfo, path string, prefix []string) (err error) {
+func printDir(out io.Writer, nodes []Node, prefix []string) {
 	fmt.Fprintf(out, "%s", strings.Join(prefix, ""))
-
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].Name() < nodes[j].Name()
-	})
 
 	node := nodes[0]
 
 	if len(nodes) == 1 {
-		fmt.Fprintf(out, "%s%s\n", "└───", node.Name())
-		if node.IsDir() {
-			nextDir := filepath.Join(path, node.Name())
-			_, files := getDir(nextDir)
-			printDir(out, files, filepath.Join(path, node.Name()), append(prefix, "\t"))
+		fmt.Fprintf(out, "%s%s\n", "└───", node.name)
+		if node.hasNodes() {
+			printDir(out, node.nodes, append(prefix, "\t"))
 		}
-
-		return nil
+		return
 	}
 
-	fmt.Fprintf(out, "%s%s\n", "├───", node.Name())
-	if node.IsDir() {
-		nextDir := filepath.Join(path, node.Name())
-		_, files := getDir(nextDir)
-		printDir(out, files, filepath.Join(path, node.Name()), append(prefix, "|\t"))
+	fmt.Fprintf(out, "%s%s\n", "├───", node.name)
+	if node.hasNodes() {
+		printDir(out, node.nodes, append(prefix, "|\t"))
 	}
 
-	printDir(out, nodes[1:], path, prefix)
-
-	return err
+	printDir(out, nodes[1:], prefix)
 }
 
 func dirTree(out io.Writer, path string, printFiles bool) (err error) {
-	_, files := getDir(path)
-	printDir(out, files, path, []string{})
-	fmt.Fprintf(out, "%v", readDir(path, []Node{}))
+	nodes := readDir(path, []Node{})
+	printDir(out, nodes, []string{})
+
 	return err
 }
 
