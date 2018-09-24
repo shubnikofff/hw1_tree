@@ -9,35 +9,48 @@ import (
 	"strings"
 )
 
-func dirTree(out io.Writer, path string, printFiles bool) (err error) {
+func readDir(path string) (err error, files []os.FileInfo) {
 	file, err := os.Open(path)
-	dir, err := file.Readdir(0)
+	files, err = file.Readdir(0)
 	file.Close()
+	return err, files
+}
 
-	sort.Slice(dir, func(i, j int) bool {
-		return dir[i].Name() < dir[j].Name()
+func printDir(out io.Writer, nodes []os.FileInfo, path string, prefix []string) (err error) {
+	fmt.Fprintf(out, "%s", strings.Join(prefix, ""))
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].Name() < nodes[j].Name()
 	})
 
-	var b strings.Builder
-	for range strings.Split(path, "/") {
-		b.WriteString("\t")
-	}
+	node := nodes[0]
 
-	for idx, info := range dir {
-		if idx == len(dir) -1 {
-			b.WriteString("└───")
-		} else {
-			b.WriteString("├───")
+	if len(nodes) == 1 {
+		fmt.Fprintf(out, "%s%s\n", "└───", node.Name())
+		if node.IsDir() {
+			nextDir := filepath.Join(path, node.Name())
+			_, files := readDir(nextDir)
+			printDir(out, files, filepath.Join(path, node.Name()), append(prefix, "\t"))
 		}
 
-		if info.IsDir() {
-			fmt.Fprintf(out, "%s%s\n", b.String(), info.Name())
-			dirTree(out, filepath.Join(path, info.Name()), printFiles)
-		} else if printFiles {
-			fmt.Fprintf(out, "%s%s (%db)\n", b.String(), info.Name(), info.Size())
-		}
+		return nil
 	}
 
+	fmt.Fprintf(out, "%s%s\n", "├───", node.Name())
+	if node.IsDir() {
+		nextDir := filepath.Join(path, node.Name())
+		_, files := readDir(nextDir)
+		printDir(out, files, filepath.Join(path, node.Name()), append(prefix, "|\t"))
+	}
+
+	printDir(out, nodes[1:], path, prefix)
+
+	return err
+}
+
+func dirTree(out io.Writer, path string, printFiles bool) (err error) {
+	_, files := readDir(path)
+	printDir(out, files, path, []string{})
 	return err
 }
 
