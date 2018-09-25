@@ -6,19 +6,36 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 type Node struct {
-	name  string
-	nodes []Node
+	name string
 }
 
-func (node Node) hasNodes() bool {
-	return len(node.nodes) > 0
+type Directory struct {
+	Node
+	children []fmt.Stringer
 }
 
-func readDir(path string, nodes []Node) []Node {
+type File struct {
+	Node
+	size int64
+}
+
+func (file File) String() string {
+	if file.size == 0 {
+		return file.name + " (empty)"
+	}
+	return file.name + " (" + strconv.FormatInt(file.size, 10) + "b)"
+}
+
+func (directory Directory) String() string {
+	return directory.name
+}
+
+func readDir(path string, nodes []fmt.Stringer) []fmt.Stringer {
 	file, _ := os.Open(path)
 	files, _ := file.Readdir(0)
 	file.Close()
@@ -28,12 +45,15 @@ func readDir(path string, nodes []Node) []Node {
 	})
 
 	for _, info := range files {
-		var newNode = Node{
-			name: info.Name(),
-		}
+		var newNode fmt.Stringer
 
 		if info.IsDir() {
-			newNode.nodes = readDir(filepath.Join(path, info.Name()), []Node{})
+			newNode = Directory{
+				Node:     Node{info.Name()},
+				children: readDir(filepath.Join(path, info.Name()), []fmt.Stringer{}),
+			}
+		} else {
+			newNode = File{Node{info.Name()}, info.Size()}
 		}
 
 		nodes = append(nodes, newNode)
@@ -42,29 +62,29 @@ func readDir(path string, nodes []Node) []Node {
 	return nodes
 }
 
-func printDir(out io.Writer, nodes []Node, prefix []string) {
+func printDir(out io.Writer, nodes []fmt.Stringer, prefix []string) {
 	fmt.Fprintf(out, "%s", strings.Join(prefix, ""))
 
 	node := nodes[0]
 
 	if len(nodes) == 1 {
-		fmt.Fprintf(out, "%s%s\n", "└───", node.name)
-		if node.hasNodes() {
-			printDir(out, node.nodes, append(prefix, "\t"))
+		fmt.Fprintf(out, "%s%s\n", "└───", node)
+		if directory, ok := node.(Directory); ok {
+			printDir(out, directory.children, append(prefix, "\t"))
 		}
 		return
 	}
 
-	fmt.Fprintf(out, "%s%s\n", "├───", node.name)
-	if node.hasNodes() {
-		printDir(out, node.nodes, append(prefix, "|\t"))
+	fmt.Fprintf(out, "%s%s\n", "├───", node)
+	if directory, ok := node.(Directory); ok {
+		printDir(out, directory.children, append(prefix, "│\t"))
 	}
 
 	printDir(out, nodes[1:], prefix)
 }
 
 func dirTree(out io.Writer, path string, printFiles bool) (err error) {
-	nodes := readDir(path, []Node{})
+	nodes := readDir(path, []fmt.Stringer{})
 	printDir(out, nodes, []string{})
 
 	return err
