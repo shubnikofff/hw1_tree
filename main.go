@@ -10,9 +10,13 @@ import (
 	"strings"
 )
 
+type Node interface {
+	fmt.Stringer
+}
+
 type Directory struct {
 	name     string
-	children []fmt.Stringer
+	children []Node
 }
 
 type File struct {
@@ -31,9 +35,9 @@ func (directory Directory) String() string {
 	return directory.name
 }
 
-func readDir(path string, nodes []fmt.Stringer) []fmt.Stringer {
-	file, _ := os.Open(path)
-	files, _ := file.Readdir(0)
+func readDir(path string, nodes []Node, withFiles bool) (error, []Node) {
+	file, err := os.Open(path)
+	files, err := file.Readdir(0)
 	file.Close()
 
 	sort.Slice(files, func(i, j int) bool {
@@ -41,10 +45,14 @@ func readDir(path string, nodes []fmt.Stringer) []fmt.Stringer {
 	})
 
 	for _, info := range files {
-		var newNode fmt.Stringer
+		if !(info.IsDir() || withFiles) {
+			continue
+		}
 
+		var newNode Node
 		if info.IsDir() {
-			newNode = Directory{info.Name(), readDir(filepath.Join(path, info.Name()), []fmt.Stringer{})}
+			_, children := readDir(filepath.Join(path, info.Name()), []Node{}, withFiles)
+			newNode = Directory{info.Name(), children}
 		} else {
 			newNode = File{info.Name(), info.Size()}
 		}
@@ -52,10 +60,14 @@ func readDir(path string, nodes []fmt.Stringer) []fmt.Stringer {
 		nodes = append(nodes, newNode)
 	}
 
-	return nodes
+	return err, nodes
 }
 
-func printDir(out io.Writer, nodes []fmt.Stringer, prefix []string) {
+func printDir(out io.Writer, nodes []Node, prefix []string) {
+	if len(nodes) == 0 {
+		return
+	}
+
 	fmt.Fprintf(out, "%s", strings.Join(prefix, ""))
 
 	node := nodes[0]
@@ -76,8 +88,8 @@ func printDir(out io.Writer, nodes []fmt.Stringer, prefix []string) {
 	printDir(out, nodes[1:], prefix)
 }
 
-func dirTree(out io.Writer, path string, printFiles bool) (err error) {
-	nodes := readDir(path, []fmt.Stringer{})
+func dirTree(out io.Writer, path string, printFiles bool) error {
+	err, nodes := readDir(path, []Node{}, printFiles)
 	printDir(out, nodes, []string{})
 
 	return err
