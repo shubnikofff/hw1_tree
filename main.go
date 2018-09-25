@@ -63,29 +63,29 @@ func readDir(path string, nodes []Node, withFiles bool) (error, []Node) {
 	return err, nodes
 }
 
-func printDir(out io.Writer, nodes []Node, prefix []string) {
+func printDir(out io.Writer, nodes []Node, prefixes []string) {
 	if len(nodes) == 0 {
 		return
 	}
 
-	fmt.Fprintf(out, "%s", strings.Join(prefix, ""))
+	fmt.Fprintf(out, "%s", strings.Join(prefixes, ""))
 
 	node := nodes[0]
 
 	if len(nodes) == 1 {
 		fmt.Fprintf(out, "%s%s\n", "└───", node)
 		if directory, ok := node.(Directory); ok {
-			printDir(out, directory.children, append(prefix, "\t"))
+			printDir(out, directory.children, append(prefixes, "\t"))
 		}
 		return
 	}
 
 	fmt.Fprintf(out, "%s%s\n", "├───", node)
 	if directory, ok := node.(Directory); ok {
-		printDir(out, directory.children, append(prefix, "│\t"))
+		printDir(out, directory.children, append(prefixes, "│\t"))
 	}
 
-	printDir(out, nodes[1:], prefix)
+	printDir(out, nodes[1:], prefixes)
 }
 
 func dirTree(out io.Writer, path string, printFiles bool) error {
