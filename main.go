@@ -10,17 +10,13 @@ import (
 	"strings"
 )
 
-type Node struct {
-	name string
-}
-
 type Directory struct {
-	Node
+	name     string
 	children []fmt.Stringer
 }
 
 type File struct {
-	Node
+	name string
 	size int64
 }
 
@@ -48,12 +44,9 @@ func readDir(path string, nodes []fmt.Stringer) []fmt.Stringer {
 		var newNode fmt.Stringer
 
 		if info.IsDir() {
-			newNode = Directory{
-				Node:     Node{info.Name()},
-				children: readDir(filepath.Join(path, info.Name()), []fmt.Stringer{}),
-			}
+			newNode = Directory{info.Name(), readDir(filepath.Join(path, info.Name()), []fmt.Stringer{})}
 		} else {
-			newNode = File{Node{info.Name()}, info.Size()}
+			newNode = File{info.Name(), info.Size()}
 		}
 
 		nodes = append(nodes, newNode)
